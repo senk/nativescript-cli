@@ -227,6 +227,8 @@ interface IDependencyData {
 	 * Describes the `nativescript` key in package.json of a dependency.
 	 */
 	nativescript?: any;
+
+	dependencies?: string[];
 }
 
 interface IStaticConfig extends Config.IStaticConfig { }

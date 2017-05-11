@@ -3,6 +3,8 @@ import { assert } from "chai";
 import { NodeModulesDependenciesBuilder } from "../../../lib/tools/node-modules/node-modules-dependencies-builder";
 import * as path from "path";
 import * as constants from "../../../lib/constants";
+import { ErrorsStub } from "../../stubs";
+import { HostInfo } from "../../../lib/common/host-info";
 
 interface IDependencyInfo {
 	name: string;
@@ -21,6 +23,9 @@ describe("nodeModulesDependenciesBuilder", () => {
 		testInjector.register("fs", {
 			readJson: (pathToFile: string): any => undefined
 		});
+
+		testInjector.register("errors", ErrorsStub);
+		testInjector.register("hostInfo", HostInfo);
 
 		return testInjector;
 	};
@@ -54,12 +59,12 @@ describe("nodeModulesDependenciesBuilder", () => {
 			 * Helper functions for easier writing of consecutive tests in the suite.  *
 			 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-			const getPathToDependencyInNodeModules = (dependencyName: string): string => {
-				return path.join(pathToProject, constants.NODE_MODULES_FOLDER_NAME, dependencyName);
+			const getPathToDependencyInNodeModules = (dependencyName: string, parentDir?: string): string => {
+				return path.join(parentDir || pathToProject, constants.NODE_MODULES_FOLDER_NAME, dependencyName);
 			};
 
 			const getNodeModuleInfoForExpecteDependency = (name: string, depth: number, nativescript?: any): IDependencyData => {
-				let result: IDependencyData =  {
+				let result: IDependencyData = {
 					name: path.basename(name),
 					directory: getPathToDependencyInNodeModules(name),
 					depth
@@ -72,8 +77,8 @@ describe("nodeModulesDependenciesBuilder", () => {
 				return result;
 			};
 
-			const getPathToPackageJsonOfDependency = (dependencyName: string): string => {
-				return path.join(getPathToDependencyInNodeModules(dependencyName), constants.PACKAGE_JSON_FILE_NAME);
+			const getPathToPackageJsonOfDependency = (dependencyName: string, parentDir?: string): string => {
+				return path.join(getPathToDependencyInNodeModules(dependencyName, parentDir), constants.PACKAGE_JSON_FILE_NAME);
 			};
 
 			const getDependenciesObjectFromDependencyInfo = (depInfos: IDependencyInfo[], nativescript: any): { dependencies: any, nativescript?: any } => {
@@ -93,16 +98,16 @@ describe("nodeModulesDependenciesBuilder", () => {
 				return result;
 			};
 
-			const getDependenciesObject = (filename: string, deps: IDependencyInfo[]): { dependencies: any } => {
+			const getDependenciesObject = (filename: string, deps: IDependencyInfo[], parentDir: string): { dependencies: any } => {
 				let result: { dependencies: any } = null;
 				for (let dependencyInfo of deps) {
-					const pathToPackageJson = getPathToPackageJsonOfDependency(dependencyInfo.name);
+					const pathToPackageJson = getPathToPackageJsonOfDependency(dependencyInfo.name, parentDir);
 					if (filename === pathToPackageJson) {
 						return getDependenciesObjectFromDependencyInfo(dependencyInfo.dependencies, dependencyInfo.nativescript);
 					}
 
 					if (dependencyInfo.dependencies) {
-						result = getDependenciesObject(filename, dependencyInfo.dependencies);
+						result = getDependenciesObject(filename, dependencyInfo.dependencies, path.join(pathToProject, constants.NODE_MODULES_FOLDER_NAME, dependencyInfo.name));
 						if (result) {
 							break;
 						}
@@ -118,7 +123,7 @@ describe("nodeModulesDependenciesBuilder", () => {
 				const fs = testInjector.resolve<IFileSystem>("fs");
 
 				fs.readJson = (filename: string, encoding?: string): any => {
-					const innerDependency = getDependenciesObject(filename, rootDeps);
+					const innerDependency = getDependenciesObject(filename, rootDeps, pathToProject);
 					return innerDependency || getDependenciesObjectFromDependencyInfo(rootDeps, null);
 				};
 
@@ -233,8 +238,8 @@ describe("nodeModulesDependenciesBuilder", () => {
 
 				const expectedResult: IDependencyData[] = [
 					getNodeModuleInfoForExpecteDependency(firstPackage, 0),
-					getNodeModuleInfoForExpecteDependency(path.join(firstPackage, constants.NODE_MODULES_FOLDER_NAME, secondPackage), 1),
-					getNodeModuleInfoForExpecteDependency(secondPackage, 0)
+					getNodeModuleInfoForExpecteDependency(secondPackage, 0),
+					getNodeModuleInfoForExpecteDependency(path.join(firstPackage, constants.NODE_MODULES_FOLDER_NAME, secondPackage), 1)
 				];
 
 				const nodeModulesDependenciesBuilder = generateTest(rootDeps);
@@ -266,11 +271,11 @@ describe("nodeModulesDependenciesBuilder", () => {
 				const pathToSecondPackageInsideFirstPackage = path.join(firstPackage, constants.NODE_MODULES_FOLDER_NAME, secondPackage);
 				const expectedResult: IDependencyData[] = [
 					getNodeModuleInfoForExpecteDependency(firstPackage, 0),
-					getNodeModuleInfoForExpecteDependency(pathToSecondPackageInsideFirstPackage, 1),
 					getNodeModuleInfoForExpecteDependency(secondPackage, 0),
 					getNodeModuleInfoForExpecteDependency(thirdPackage, 0),
+					getNodeModuleInfoForExpecteDependency(pathToSecondPackageInsideFirstPackage, 1),
+					getNodeModuleInfoForExpecteDependency(path.join(firstPackage, constants.NODE_MODULES_FOLDER_NAME, thirdPackage), 1),
 					getNodeModuleInfoForExpecteDependency(path.join(pathToSecondPackageInsideFirstPackage, constants.NODE_MODULES_FOLDER_NAME, thirdPackage), 2),
-					getNodeModuleInfoForExpecteDependency(path.join(firstPackage, constants.NODE_MODULES_FOLDER_NAME, thirdPackage), 1)
 				];
 
 				const nodeModulesDependenciesBuilder = generateTest(rootDeps);
