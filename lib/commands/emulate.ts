@@ -1,8 +1,8 @@
 export class EmulateCommandBase {
 	constructor(private $options: IOptions,
-		private $projectData: IProjectData,
-		private $logger: ILogger,
-		private $platformService: IPlatformService) {
+		protected $projectData: IProjectData,
+		protected $logger: ILogger,
+		protected $platformService: IPlatformService) {
 		this.$projectData.initializeProjectData();
 	}
 
@@ -34,15 +34,22 @@ export class EmulateCommandBase {
 export class EmulateIosCommand extends EmulateCommandBase implements ICommand {
 	public allowedParameters: ICommandParameter[] = [];
 
-	constructor($options: IOptions,
-		$projectData: IProjectData,
-		$logger: ILogger,
+	constructor(
+		private $platformsData: IPlatformsData,
+		private $devicePlatformsConstants: Mobile.IDevicePlatformsConstants,
+		private $errors: IErrors,
 		$platformService: IPlatformService,
-		private $platformsData: IPlatformsData) {
+		$logger: ILogger,
+		$projectData: IProjectData,
+		$options: IOptions) {
 		super($options, $projectData, $logger, $platformService);
 	}
 
 	public async execute(args: string[]): Promise<void> {
+		if (!this.$platformService.isPlatformSupportedForOS(this.$devicePlatformsConstants.iOS, this.$projectData)) {
+			this.$errors.fail("Applications for platform %s can not be built on this OS - %s", this.$devicePlatformsConstants.iOS, process.platform);
+		}
+
 		return this.executeCore([this.$platformsData.availablePlatforms.iOS]);
 	}
 }
@@ -50,17 +57,24 @@ export class EmulateIosCommand extends EmulateCommandBase implements ICommand {
 $injector.registerCommand("emulate|ios", EmulateIosCommand);
 
 export class EmulateAndroidCommand extends EmulateCommandBase implements ICommand {
-	constructor($options: IOptions,
-		$projectData: IProjectData,
-		$logger: ILogger,
+	constructor(
+		private $platformsData: IPlatformsData,
+		private $devicePlatformsConstants: Mobile.IDevicePlatformsConstants,
+		private $errors: IErrors,
 		$platformService: IPlatformService,
-		private $platformsData: IPlatformsData) {
+		$logger: ILogger,
+		$projectData: IProjectData,
+		$options: IOptions) {
 		super($options, $projectData, $logger, $platformService);
 	}
 
 	public allowedParameters: ICommandParameter[] = [];
 
 	public async execute(args: string[]): Promise<void> {
+		if (!this.$platformService.isPlatformSupportedForOS(this.$devicePlatformsConstants.Android, this.$projectData)) {
+			this.$errors.fail("Applications for platform %s can not be built on this OS - %s", this.$devicePlatformsConstants.Android, process.platform);
+		}
+
 		return this.executeCore([this.$platformsData.availablePlatforms.Android]);
 	}
 }
