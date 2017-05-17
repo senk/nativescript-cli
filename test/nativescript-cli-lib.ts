@@ -19,6 +19,7 @@ describe("nativescript-cli-lib", () => {
 		localBuildService: ["build"],
 		deviceLogProvider: null,
 		npm: ["install", "uninstall", "view", "search"],
+		devicesService: ["getDevices", "setLogLevel", "isAppInstalledOnDevices", "isCompanionAppInstalledOnDevices", "addDeviceDiscovery", "deployOnDevices", "initialize", "mapAbstractToTcpPort", "getDebuggableApps", "getDebuggableViews"],
 		extensibilityService: ["loadExtensions", "getInstalledExtensions", "installExtension", "uninstallExtension"],
 		debugService: ["debug"]
 	};
