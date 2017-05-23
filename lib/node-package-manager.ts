@@ -39,8 +39,7 @@ export class NodePackageManager implements INodePackageManager {
 			}
 		}
 		try {
-			let spawnResult: ISpawnResult = await this.$childProcess.spawnFromEvent(this.getNpmExecutableName(), params, "close", { cwd: pwd, stdio: "inherit" });
-			this.$logger.out(spawnResult.stdout);
+			await this.getNpmInstallResult(params, pwd);
 		} catch (err) {
 			if (err.message && err.message.indexOf("EPEERINVALID") !== -1) {
 				// Not installed peer dependencies are treated by npm 2 as errors, but npm 3 treats them as warnings.
@@ -137,6 +136,61 @@ export class NodePackageManager implements INodePackageManager {
 		}
 
 		return array.join(" ");
+	}
+
+	private async getNpmInstallResult(params: string[], cwd: string): Promise<ISpawnResult> {
+		return new Promise<ISpawnResult>((resolve, reject) => {
+			const npmExecutable = this.getNpmExecutableName();
+			let childProcess = this.$childProcess.spawn(npmExecutable, params, { cwd, stdio: "pipe" });
+
+			let isFulfilled = false;
+			let capturedOut = "";
+			let capturedErr = "";
+
+			childProcess.stdout.on("data", (data: string) => {
+				this.$logger.write(data.toString());
+				capturedOut += data;
+			});
+
+			if (childProcess.stderr) {
+				childProcess.stderr.on("data", (data: string) => {
+					console.error(data.toString());
+					capturedErr += data;
+				});
+			}
+
+			childProcess.on("close", (arg: any) => {
+				const exitCode = typeof arg === "number" ? arg : arg && arg.code;
+
+				if (exitCode === 0) {
+					isFulfilled = true;
+					const result = {
+						stdout: capturedOut,
+						stderr: capturedErr,
+						exitCode
+					};
+
+					resolve(result);
+				} else {
+					let errorMessage = `Command ${npmExecutable} ${params && params.join(" ")} failed with exit code ${exitCode}`;
+					if (capturedErr) {
+						errorMessage += ` Error output: \n ${capturedErr}`;
+					}
+
+					if (!isFulfilled) {
+						isFulfilled = true;
+						reject(new Error(errorMessage));
+					}
+				}
+			});
+
+			childProcess.on("error", (err: Error) => {
+				if (!isFulfilled) {
+					isFulfilled = true;
+					reject(err);
+				}
+			});
+		});
 	}
 }
 
