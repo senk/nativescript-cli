@@ -53,10 +53,14 @@ export abstract class PlatformLiveSyncServiceBase implements IPlatformLiveSyncSe
 			await this.refreshApplication(deviceAppData, localToDevicePaths, true, projectData);
 			await this.finishLivesync(deviceAppData);
 		};
+
 		await this.$devicesService.execute(action, canExecute);
 	}
 
-	public async partialSync(event: string, filePath: string, dispatcher: IFutureDispatcher, afterFileSyncAction: (deviceAppData: Mobile.IDeviceAppData, localToDevicePaths: Mobile.ILocalToDevicePathData[]) => Promise<void>, projectData: IProjectData): Promise<void> {
+	public async partialSync(event: string, filePath: string, dispatcher: IFutureDispatcher,
+		afterFileSyncAction: (deviceAppData: Mobile.IDeviceAppData, localToDevicePaths: Mobile.ILocalToDevicePathData[]) => Promise<void>,
+		projectData: IProjectData): Promise<void> {
+
 		if (this.isFileExcluded(filePath, this.liveSyncData.excludedProjectDirsAndFiles)) {
 			this.$logger.trace(`Skipping livesync for changed file ${filePath} as it is excluded in the patterns: ${this.liveSyncData.excludedProjectDirsAndFiles.join(", ")}`);
 			return;
@@ -129,6 +133,7 @@ export abstract class PlatformLiveSyncServiceBase implements IPlatformLiveSyncSe
 		let platformBatch: ISyncBatch = this.batch[this.liveSyncData.platform];
 		if (!platformBatch || !platformBatch.syncPending) {
 			let done = async () => {
+				// Dispatcher's dispatch is in fact our full queue of actions.
 				dispatcher.dispatch(async () => {
 					try {
 						for (let platform in this.batch) {
@@ -168,6 +173,7 @@ export abstract class PlatformLiveSyncServiceBase implements IPlatformLiveSyncSe
 
 	private getSyncAction(
 		filesToSync: string[],
+		//rebuildAction: (...args: any[]) => Promise<string>,
 		fileSyncAction: (deviceAppData: Mobile.IDeviceAppData, localToDevicePaths: Mobile.ILocalToDevicePathData[]) => Promise<void>,
 		afterFileSyncAction: (deviceAppData: Mobile.IDeviceAppData, localToDevicePaths: Mobile.ILocalToDevicePathData[]) => Promise<void>,
 		projectData: IProjectData): (device: Mobile.IDevice) => Promise<void> {
@@ -176,6 +182,7 @@ export abstract class PlatformLiveSyncServiceBase implements IPlatformLiveSyncSe
 			let localToDevicePaths: Mobile.ILocalToDevicePathData[] = null;
 			let isFullSync = false;
 
+			// TODO: Remove this from here - it should be in a separate service.
 			if (this.$projectChangesService.currentChanges.changesRequireBuild) {
 				let buildConfig: IBuildConfig = {
 					buildForDevice: !device.isEmulator,
@@ -186,11 +193,29 @@ export abstract class PlatformLiveSyncServiceBase implements IPlatformLiveSyncSe
 					provision: this.$options.provision,
 				};
 				let platform = device.deviceInfo.platform;
+				let pathToBuildResult: string = null;
 				if (this.$platformService.shouldBuild(platform, projectData, buildConfig)) {
+					// const cloudBuildService: any = this.$injector.resolve("cloudBuildService");
+					// const data1: any = {
+					// 	projectDir: 'D:\\Work\\nativescript-cli\\scratch\\appNew7',
+					// 	projectId: 'org.nativescript.SMBarcode',
+					// 	projectName: 'appNew7',
+					// 	nativescriptData:
+					// 	{
+					// 		id: 'org.nativescript.SMBarcode',
+					// 		'tns-android': { version: '3.0.0' }
+					// 	}
+					// };
+					// const res = await cloudBuildService.build(data1, "Android", "Debug");
+					// console.log("_____________________________________ ", res.outputFilePath);
+					// await device.applicationManager.reinstallApplication(data1.nativescriptData.id, res.outputFilePath);
+					// console.log("AFTER REINSTALLING!!!!");
+					// pathToBuildResult = await rebuildAction();
 					await this.$platformService.buildPlatform(platform, buildConfig, projectData);
 				}
 
-				await this.$platformService.installApplication(device, buildConfig, projectData);
+				// TODO: Make sure we are reading app id for android from specified place.
+				await this.$platformService.installApplication(device, buildConfig, projectData, pathToBuildResult);
 				deviceAppData = this.$deviceAppDataFactory.create(this.liveSyncData.appIdentifier, this.$mobileHelper.normalizePlatformName(this.liveSyncData.platform), device);
 				isFullSync = true;
 			} else {

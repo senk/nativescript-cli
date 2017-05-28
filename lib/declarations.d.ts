@@ -258,7 +258,7 @@ interface IOpener {
 }
 
 interface ILiveSyncService {
-	liveSync(platform: string, projectData: IProjectData, applicationReloadAction?: (deviceAppData: Mobile.IDeviceAppData) => Promise<void>): Promise<void>;
+	liveSync(platform: string, projectData: IProjectData, applicationReloadAction?: (deviceAppData: Mobile.IDeviceAppData) => Promise<void>, options?: IOptions): Promise<void>;
 }
 
 interface INativeScriptDeviceLiveSyncService extends IDeviceLiveSyncServiceBase {

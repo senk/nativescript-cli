@@ -139,3 +139,7 @@ $injector.requireCommand("extension|uninstall", "./commands/extensibility/uninst
 $injector.requirePublic("extensibilityService", "./services/extensibility-service");
 
 $injector.require("nodeModulesDependenciesBuilder", "./tools/node-modules/node-modules-dependencies-builder");
+$injector.require("fileSysemWatcher", "./services/livesync/file-system-watcher");
+
+$injector.requireCommand("livesync2", "./commands/livesync2");
+

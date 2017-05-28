@@ -4,7 +4,7 @@ import * as helpers from "../../common/helpers";
 import * as path from "path";
 import * as net from "net";
 
-class AndroidLiveSyncService implements INativeScriptDeviceLiveSyncService {
+export class AndroidLiveSyncService implements INativeScriptDeviceLiveSyncService {
 	private static BACKEND_PORT = 18182;
 	private device: Mobile.IAndroidDevice;
 
@@ -23,11 +23,11 @@ class AndroidLiveSyncService implements INativeScriptDeviceLiveSyncService {
 	public async refreshApplication(deviceAppData: Mobile.IDeviceAppData, localToDevicePaths: Mobile.ILocalToDevicePathData[], forceExecuteFullSync: boolean, projectData: IProjectData): Promise<void> {
 		await this.device.adb.executeShellCommand(
 			["chmod",
-			"777",
-			await deviceAppData.getDeviceProjectRootPath(),
-			`/data/local/tmp/${deviceAppData.appIdentifier}`,
-			`/data/local/tmp/${deviceAppData.appIdentifier}/sync`]
-			);
+				"777",
+				await deviceAppData.getDeviceProjectRootPath(),
+				`/data/local/tmp/${deviceAppData.appIdentifier}`,
+				`/data/local/tmp/${deviceAppData.appIdentifier}/sync`]
+		);
 
 		let canExecuteFastSync = !forceExecuteFullSync && !_.some(localToDevicePaths, (localToDevicePath: any) => !this.$liveSyncProvider.canExecuteFastSync(localToDevicePath.getLocalPath(), projectData, deviceAppData.platform));
 

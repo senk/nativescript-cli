@@ -56,7 +56,7 @@ export abstract class DebugPlatformCommand implements ICommand {
 			this.printDebugInformation(await this.debugService.debug<string[]>(debugData, debugOptions));
 		};
 
-		return this.$usbLiveSyncService.liveSync(this.$devicesService.platform, this.$projectData, applicationReloadAction);
+		return this.$usbLiveSyncService.liveSync(this.$devicesService.platform, this.$projectData, applicationReloadAction, this.$options);
 	}
 
 	public async canExecute(args: string[]): Promise<boolean> {

@@ -71,7 +71,7 @@ class TestExecutionService implements ITestExecutionService {
 						teamId: this.$options.teamId
 					};
 					await this.$platformService.deployPlatform(platform, appFilesUpdaterOptions, deployOptions, projectData, this.$options);
-					await this.$usbLiveSyncService.liveSync(platform, projectData);
+					await this.$usbLiveSyncService.liveSync(platform, projectData, null, this.$options);
 
 					if (this.$options.debugBrk) {
 						this.$logger.info('Starting debugger...');
@@ -146,7 +146,7 @@ class TestExecutionService implements ITestExecutionService {
 					await debugService.debug(debugData, this.$options);
 				} else {
 					await this.$platformService.deployPlatform(platform, appFilesUpdaterOptions, deployOptions, projectData, this.$options);
-					await this.$usbLiveSyncService.liveSync(platform, projectData);
+					await this.$usbLiveSyncService.liveSync(platform, projectData, null, this.$options);
 				}
 			};
 
