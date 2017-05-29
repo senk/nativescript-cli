@@ -90,9 +90,6 @@ export class RunService implements IRunService {
 				return path.join("app", path.relative(tempApp, res));
 			});
 
-
-
-
 			await device.fileSystem.transferFiles(deviceAppData, [{
 				getLocalPath: () => tempZip,
 				getDevicePath: () => deviceAppData.deviceSyncZipPath,
@@ -105,42 +102,52 @@ export class RunService implements IRunService {
 		}
 	}
 
-	public async liveSynciOS(projectDir?: string): Promise<void> {
+	public async liveSynciOS(outputPath: string, buildAction: (device: Mobile.IDevice) => Promise<string>, projectDir?: string): Promise<void> {
 		await this.$devicesService.initialize({ platform: "ios", skipDeviceDetectionInterval: true });
 		// TODO: Initialize devicesService before that.
 		const projectData = this.$projectDataService.getProjectData(projectDir);
 
 		const appFilesUpdaterOptions: IAppFilesUpdaterOptions = { bundle: this.$options.bundle, release: this.$options.release };
-		const deployOptions: IDeployPlatformOptions = {
-			clean: this.$options.clean,
-			device: this.$options.device,
-			emulator: this.$options.emulator,
-			projectDir: this.$options.path,
-			platformTemplate: this.$options.platformTemplate,
-			release: this.$options.release,
-			provision: this.$options.provision,
-			teamId: this.$options.teamId,
-			keyStoreAlias: this.$options.keyStoreAlias,
-			keyStoreAliasPassword: this.$options.keyStoreAliasPassword,
-			keyStorePassword: this.$options.keyStorePassword,
-			keyStorePath: this.$options.keyStorePath
-		};
+		// const deployOptions: IDeployPlatformOptions = {
+		// 	clean: this.$options.clean,
+		// 	device: this.$options.device,
+		// 	emulator: this.$options.emulator,
+		// 	projectDir: this.$options.path,
+		// 	platformTemplate: this.$options.platformTemplate,
+		// 	release: this.$options.release,
+		// 	provision: this.$options.provision,
+		// 	teamId: this.$options.teamId,
+		// 	keyStoreAlias: this.$options.keyStoreAlias,
+		// 	keyStoreAliasPassword: this.$options.keyStoreAliasPassword,
+		// 	keyStorePassword: this.$options.keyStorePassword,
+		// 	keyStorePath: this.$options.keyStorePath
+		// };
 
-		await this.$platformService.deployPlatform("iOS", appFilesUpdaterOptions, deployOptions, projectData, this.$options);
+		// await this.$platformService.deployPlatform("iOS", appFilesUpdaterOptions, deployOptions, projectData, this.$options);
+
+		await this.$platformService.preparePlatform("ios", appFilesUpdaterOptions, this.$options.platformTemplate, projectData, this.$options);
+
 		this.$injector.resolve("usbLiveSyncService")._isInitialized = true;
 
 		// Now fullSync
 		const deviceAction = async (device: Mobile.IDevice): Promise<void> => {
-			let platformData = this.$platformsData.getPlatformData(device.deviceInfo.platform, projectData);
+			const shouldBuild = await this.$platformService.shouldBuild("ios", projectData, <any>{ buildForDevice: !device.isEmulator }, outputPath);
+			if (shouldBuild) {
+				const pathToBuildItem = await buildAction(device);
+				await this.$platformService.installApplication(device, { release: false }, projectData, pathToBuildItem, outputPath);
+			} else {
+				let platformData = this.$platformsData.getPlatformData(device.deviceInfo.platform, projectData);
+				const deviceAppData = this.$injector.resolve(deviceAppDataIdentifiers.IOSAppIdentifier,
+					{ _appIdentifier: projectData.projectId, device, platform: device.deviceInfo.platform });
+				// const excludedProjectDirsAndFiles = this.$options.release ? constants.LIVESYNC_EXCLUDED_FILE_PATTERNS : []
+				const projectFilesPath = path.join(platformData.appDestinationDirectoryPath, "app");
+				// const localToDevicePaths = await this.$projectFilesManager.createLocalToDevicePaths(deviceAppData, projectFilesPath, null, []);
+				// await this.transferFiles(deviceAppData, localToDevicePaths, projectFilesPath, true);
 
-			const deviceAppData = this.$injector.resolve(deviceAppDataIdentifiers.IOSAppIdentifier,
-				{ _appIdentifier: projectData.projectId, device, platform: device.deviceInfo.platform });
-			// // const excludedProjectDirsAndFiles = this.$options.release ? constants.LIVESYNC_EXCLUDED_FILE_PATTERNS : []
-			const projectFilesPath = path.join(platformData.appDestinationDirectoryPath, "app");
-			// const localToDevicePaths = await this.$projectFilesManager.createLocalToDevicePaths(deviceAppData, projectFilesPath, null, []);
-			// await this.transferFiles(deviceAppData, localToDevicePaths, projectFilesPath, true);
-			await this.fullSync(device, projectFilesPath, deviceAppData);
-			await device.applicationManager.stopApplication(projectData.projectId, projectData.projectName);
+				await this.fullSync(device, projectFilesPath, deviceAppData);
+				await device.applicationManager.stopApplication(projectData.projectId, projectData.projectName);
+			}
+
 			await device.applicationManager.startApplication(projectData.projectId);
 		};
 
@@ -169,44 +176,46 @@ export class RunService implements IRunService {
 					console.log("CURRENT CHANGES AFTER PREPARE!".cyan);
 					console.log(this.$projectChangesService.currentChanges);
 					console.log("#END CURRENT CHANGES AFTER PREPARE!".cyan);
-					let buildConfig: IBuildConfig = {
-						buildForDevice: false,
-						projectDir: deployOptions.projectDir,
-						release: deployOptions.release,
-						device: deployOptions.device,
-						provision: deployOptions.provision,
-						teamId: deployOptions.teamId,
-						keyStoreAlias: deployOptions.keyStoreAlias,
-						keyStoreAliasPassword: deployOptions.keyStoreAliasPassword,
-						keyStorePassword: deployOptions.keyStorePassword,
-						keyStorePath: deployOptions.keyStorePath,
-						clean: deployOptions.clean
-					};
+					// let buildConfig: IBuildConfig = {
+					// 	buildForDevice: false,
+					// 	projectDir: deployOptions.projectDir,
+					// 	release: deployOptions.release,
+					// 	device: deployOptions.device,
+					// 	provision: deployOptions.provision,
+					// 	teamId: deployOptions.teamId,
+					// 	keyStoreAlias: deployOptions.keyStoreAlias,
+					// 	keyStoreAliasPassword: deployOptions.keyStoreAliasPassword,
+					// 	keyStorePassword: deployOptions.keyStorePassword,
+					// 	keyStorePath: deployOptions.keyStorePath,
+					// 	clean: deployOptions.clean
+					// };
 
-					if (await this.$platformService.shouldBuild("iOS", projectData, buildConfig)) {
+					await this.$devicesService.execute(async (device: Mobile.IDevice) => {
+						const shouldBuild = await this.$platformService.shouldBuild("ios", projectData, <any>{ buildForDevice: !device.isEmulator }, outputPath);
+
+						if (shouldBuild) {
+							const pathToBuildItem = await buildAction(device);
+							await this.$platformService.installApplication(device, { release: false }, projectData, pathToBuildItem, outputPath);
+						}
+					},
+						(device: Mobile.IDevice) => this.$mobileHelper.isiOSPlatform(device.deviceInfo.platform)
+					);
+
+
+					if (filesToSync.length) {
+						let currentFilesToSync = _.cloneDeep(filesToSync);
 						filesToSync = [];
-						filesToRemove = [];
-						console.log("SHOULD BULD SAID THAT WE HAVE TO REBUILD".yellow);
-						await this.$platformService.deployPlatform("iOS", appFilesUpdaterOptions, deployOptions, projectData, this.$options);
-						// Now it's time for full sync
-						this.addActionToQueue(() =>
-							this.$devicesService.execute(deviceAction, (device: Mobile.IDevice) => this.$mobileHelper.isiOSPlatform(device.deviceInfo.platform))
-						);
-					} else {
-						if (filesToSync.length) {
-							let currentFilesToSync = _.cloneDeep(filesToSync);
-							filesToSync = [];
 
-							await this.syncAddedFiles(currentFilesToSync, projectData);
-						}
-
-						if (filesToRemove.length) {
-							let currentFilesToRemove = _.cloneDeep(filesToRemove);
-							filesToRemove = [];
-
-							await this.removeFiles(currentFilesToRemove, projectData);
-						}
+						await this.syncAddedFiles(currentFilesToSync, projectData);
 					}
+
+					if (filesToRemove.length) {
+						let currentFilesToRemove = _.cloneDeep(filesToRemove);
+						filesToRemove = [];
+
+						await this.removeFiles(currentFilesToRemove, projectData);
+					}
+
 				}
 			}, 250);
 		};

@@ -1,6 +1,6 @@
 // import { AndroidLiveSyncService } from "../services/livesync/android-livesync-service";
-import { RunService } from "../services/livesync/android-livesync-service.1";
-// import { RunService } from "../services/livesync/ios-livesync-service";
+// import { RunService } from "../services/livesync/android-livesync-service.1";
+import { RunService } from "../services/livesync/ios-livesync-service";
 import * as path from "path";
 
 export class LiveSyncCommand implements ICommand {
@@ -43,8 +43,9 @@ export class LiveSyncCommand implements ICommand {
 
 		const runServuce = this.$injector.resolve<RunService>(RunService);
 		console.log("############ project.id = ", this.$projectData.projectId);
-		// await runServuce.liveSynciOS(this.$projectData.projectDir);
-		await runServuce.liveSyncAndroid(null /*path.join(this.$projectData.projectDir, ".cloud") */  , async () => {
+		await runServuce.liveSynciOS
+		// await runServuce.liveSyncAndroid
+		(null /*path.join(this.$projectData.projectDir, ".cloud") */  , async (device: Mobile.IDevice) => {
 			// const res: any = await this.$injector.resolve("cloudBuildService").build(data1, "Android", "Debug");
 			// let buildInfoFilePath = path.dirname(res.outputFilePath);
 			// let buildInfoFile = path.join(buildInfoFilePath, ".nsbuildinfo");
@@ -55,7 +56,7 @@ export class LiveSyncCommand implements ICommand {
 			// };
 
 			let buildConfig: IBuildConfig = {
-						buildForDevice: true,
+						buildForDevice: !device.isEmulator,
 						projectDir: this.$options.path,
 						release: this.$options.release,
 						device: this.$options.device,
@@ -69,8 +70,8 @@ export class LiveSyncCommand implements ICommand {
 					};
 
 			// this.$fs.writeJson(buildInfoFile, buildInfo);
-			await this.$platformService.buildPlatform("android", buildConfig, this.$projectData);
-			return this.$platformService.lastOutputPath("android", buildConfig, this.$projectData);
+			await this.$platformService.buildPlatform("ios", buildConfig, this.$projectData);
+			return this.$platformService.lastOutputPath("ios", buildConfig, this.$projectData);
 			// return res.outputFilePath;
 		}, this.$projectData.projectDir);
 		// await this.$usbLiveSyncService.liveSync(platform, this.$projectData, null, this.$options);
