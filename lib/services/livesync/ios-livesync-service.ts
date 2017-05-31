@@ -73,7 +73,16 @@ export class RunService implements IRunService {
 
 	}
 
-	private async fullSync(device: Mobile.IDevice, projectFilesPath: string, deviceAppData: Mobile.IDeviceAppData): Promise<void> {
+	private async fullSync(device: Mobile.IDevice, projectData: IProjectData): Promise<void> {
+		// Now execute fullsync.
+		let platformData = this.$platformsData.getPlatformData(device.deviceInfo.platform, projectData);
+		const deviceAppData = this.$injector.resolve(deviceAppDataIdentifiers.IOSAppIdentifier,
+			{ _appIdentifier: projectData.projectId, device, platform: device.deviceInfo.platform });
+		// const excludedProjectDirsAndFiles = this.$options.release ? constants.LIVESYNC_EXCLUDED_FILE_PATTERNS : []
+		const projectFilesPath = path.join(platformData.appDestinationDirectoryPath, "app");
+		// const localToDevicePaths = await this.$projectFilesManager.createLocalToDevicePaths(deviceAppData, projectFilesPath, null, []);
+		// await this.transferFiles(deviceAppData, localToDevicePaths, projectFilesPath, true);
+
 		if (deviceAppData.deviceSyncZipPath) {
 			temp.track();
 			let tempZip = temp.path({ prefix: "sync", suffix: ".zip" });
@@ -108,22 +117,6 @@ export class RunService implements IRunService {
 		const projectData = this.$projectDataService.getProjectData(projectDir);
 
 		const appFilesUpdaterOptions: IAppFilesUpdaterOptions = { bundle: this.$options.bundle, release: this.$options.release };
-		// const deployOptions: IDeployPlatformOptions = {
-		// 	clean: this.$options.clean,
-		// 	device: this.$options.device,
-		// 	emulator: this.$options.emulator,
-		// 	projectDir: this.$options.path,
-		// 	platformTemplate: this.$options.platformTemplate,
-		// 	release: this.$options.release,
-		// 	provision: this.$options.provision,
-		// 	teamId: this.$options.teamId,
-		// 	keyStoreAlias: this.$options.keyStoreAlias,
-		// 	keyStoreAliasPassword: this.$options.keyStoreAliasPassword,
-		// 	keyStorePassword: this.$options.keyStorePassword,
-		// 	keyStorePath: this.$options.keyStorePath
-		// };
-
-		// await this.$platformService.deployPlatform("iOS", appFilesUpdaterOptions, deployOptions, projectData, this.$options);
 
 		await this.$platformService.preparePlatform("ios", appFilesUpdaterOptions, this.$options.platformTemplate, projectData, this.$options);
 
@@ -136,15 +129,7 @@ export class RunService implements IRunService {
 				const pathToBuildItem = await buildAction(device);
 				await this.$platformService.installApplication(device, { release: false }, projectData, pathToBuildItem, outputPath);
 			} else {
-				let platformData = this.$platformsData.getPlatformData(device.deviceInfo.platform, projectData);
-				const deviceAppData = this.$injector.resolve(deviceAppDataIdentifiers.IOSAppIdentifier,
-					{ _appIdentifier: projectData.projectId, device, platform: device.deviceInfo.platform });
-				// const excludedProjectDirsAndFiles = this.$options.release ? constants.LIVESYNC_EXCLUDED_FILE_PATTERNS : []
-				const projectFilesPath = path.join(platformData.appDestinationDirectoryPath, "app");
-				// const localToDevicePaths = await this.$projectFilesManager.createLocalToDevicePaths(deviceAppData, projectFilesPath, null, []);
-				// await this.transferFiles(deviceAppData, localToDevicePaths, projectFilesPath, true);
-
-				await this.fullSync(device, projectFilesPath, deviceAppData);
+				await this.fullSync(device, projectData);
 				await device.applicationManager.stopApplication(projectData.projectId, projectData.projectName);
 			}
 
@@ -176,19 +161,6 @@ export class RunService implements IRunService {
 					console.log("CURRENT CHANGES AFTER PREPARE!".cyan);
 					console.log(this.$projectChangesService.currentChanges);
 					console.log("#END CURRENT CHANGES AFTER PREPARE!".cyan);
-					// let buildConfig: IBuildConfig = {
-					// 	buildForDevice: false,
-					// 	projectDir: deployOptions.projectDir,
-					// 	release: deployOptions.release,
-					// 	device: deployOptions.device,
-					// 	provision: deployOptions.provision,
-					// 	teamId: deployOptions.teamId,
-					// 	keyStoreAlias: deployOptions.keyStoreAlias,
-					// 	keyStoreAliasPassword: deployOptions.keyStoreAliasPassword,
-					// 	keyStorePassword: deployOptions.keyStorePassword,
-					// 	keyStorePath: deployOptions.keyStorePath,
-					// 	clean: deployOptions.clean
-					// };
 
 					await this.$devicesService.execute(async (device: Mobile.IDevice) => {
 						const shouldBuild = await this.$platformService.shouldBuild("ios", projectData, <any>{ buildForDevice: !device.isEmulator }, outputPath);
@@ -196,11 +168,15 @@ export class RunService implements IRunService {
 						if (shouldBuild) {
 							const pathToBuildItem = await buildAction(device);
 							await this.$platformService.installApplication(device, { release: false }, projectData, pathToBuildItem, outputPath);
+
+							await this.fullSync(device, projectData);
+							await this.refreshApplication(null, null, true, projectData);
+						} else {
+							// place the livesync logic for added and removed files here
 						}
 					},
 						(device: Mobile.IDevice) => this.$mobileHelper.isiOSPlatform(device.deviceInfo.platform)
 					);
-
 
 					if (filesToSync.length) {
 						let currentFilesToSync = _.cloneDeep(filesToSync);
@@ -310,13 +286,6 @@ export class RunService implements IRunService {
 		};
 
 		await this.addActionToQueue(() => this.$devicesService.execute(deviceAction, (device: Mobile.IDevice) => this.$mobileHelper.isiOSPlatform(device.deviceInfo.platform)));
-
-		// this.currentPromiseChain = this.currentPromiseChain.then(async () => {
-		// 	const res = await this.$devicesService.execute(deviceAction, (device: Mobile.IDevice) => this.$mobileHelper.isAndroidPlatform(device.deviceInfo.platform));;
-		// 	return res;
-		// });
-
-		// await this.currentPromiseChain;
 	}
 
 	public async refreshApplication(deviceAppData: Mobile.IDeviceAppData, localToDevicePaths: Mobile.ILocalToDevicePathData[], isFullSync: boolean, projectData: IProjectData): Promise<void> {

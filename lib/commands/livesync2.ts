@@ -1,7 +1,8 @@
 // import { AndroidLiveSyncService } from "../services/livesync/android-livesync-service";
 // import { RunService } from "../services/livesync/android-livesync-service.1";
-import { RunService } from "../services/livesync/ios-livesync-service";
-import * as path from "path";
+// import { RunService } from "../services/livesync/ios-livesync-service";
+// import * as path from "path";
+import * as newLs from "../services/livesync/livesync-service.2";
 
 export class LiveSyncCommand implements ICommand {
 
@@ -9,8 +10,8 @@ export class LiveSyncCommand implements ICommand {
 		private $projectData: IProjectData,
 		//	private $usbLiveSyncService: ILiveSyncService,
 		private $options: IOptions,
-		private $projectChangesService: IProjectChangesService,
-		private $fs: IFileSystem,
+		//private $projectChangesService: IProjectChangesService,
+		//private $fs: IFileSystem,
 		private $platformService: IPlatformService,
 		private $injector: IInjector) {
 		this.$projectData.initializeProjectData();
@@ -20,43 +21,71 @@ export class LiveSyncCommand implements ICommand {
 		// const rebuildAction = async (): Promise<string> => {
 
 		// 	const cloudBuildService: any = this.$injector.resolve("cloudBuildService");
-		const data1: any = {
-			projectDir: 'D:\\Work\\nativescript-cli\\scratch\\appNew7',
-			projectId: 'org.nativescript.SMBarcode',
-			projectName: 'appNew7',
-			nativescriptData:
-			{
-				id: 'org.nativescript.SMBarcode',
-				'tns-android': { version: '3.0.0' }
-			}
-		};
-		// 	const res = await cloudBuildService.build(data1, "Android", "Debug");
-		// 	console.log("_____________________________________ ", res.outputFilePath);
-		// 	return res.outputFilePath;
-		// 	// await device.applicationManager.reinstallApplication(data1.nativescriptData.id, res.outputFilePath);
-		// 	// console.log("AFTER REINSTALLING!!!!");
+		// const data1: any = {
+		// 	projectDir: 'D:\\Work\\nativescript-cli\\scratch\\appNew7',
+		// 	projectId: 'org.nativescript.SMBarcode',
+		// 	projectName: 'appNew7',
+		// 	nativescriptData:
+		// 	{
+		// 		id: 'org.nativescript.SMBarcode',
+		// 		'tns-android': { version: '3.0.0' }
+		// 	}
 		// };
+		// // 	const res = await cloudBuildService.build(data1, "Android", "Debug");
+		// // 	console.log("_____________________________________ ", res.outputFilePath);
+		// // 	return res.outputFilePath;
+		// // 	// await device.applicationManager.reinstallApplication(data1.nativescriptData.id, res.outputFilePath);
+		// // 	// console.log("AFTER REINSTALLING!!!!");
+		// // };
 
-		// // const platform = this.$mobileHelper.normalizePlatformName(args[0]);
-		// // const a = this.$injector.resolve<AndroidLiveSyncService>(AndroidLiveSyncService);
-		// // await a.liveSync(platform, this.$projectData, this.$options);
+		// // // const platform = this.$mobileHelper.normalizePlatformName(args[0]);
+		// // // const a = this.$injector.resolve<AndroidLiveSyncService>(AndroidLiveSyncService);
+		// // // await a.liveSync(platform, this.$projectData, this.$options);
 
-		const runServuce = this.$injector.resolve<RunService>(RunService);
-		console.log("############ project.id = ", this.$projectData.projectId);
-		await runServuce.liveSynciOS
-		// await runServuce.liveSyncAndroid
-		(null /*path.join(this.$projectData.projectDir, ".cloud") */  , async (device: Mobile.IDevice) => {
-			// const res: any = await this.$injector.resolve("cloudBuildService").build(data1, "Android", "Debug");
-			// let buildInfoFilePath = path.dirname(res.outputFilePath);
-			// let buildInfoFile = path.join(buildInfoFilePath, ".nsbuildinfo");
-			// let prepareInfo = this.$projectChangesService.getPrepareInfo("android", this.$projectData);
-			// let buildInfo: IBuildInfo = {
-			// 	prepareTime: prepareInfo.changesRequireBuildTime,
-			// 	buildTime: new Date().toString()
-			// };
+		// const runServuce = this.$injector.resolve<RunService>(RunService);
+		// console.log("############ project.id = ", this.$projectData.projectId);
+		// await runServuce.liveSynciOS
+		// // await runServuce.liveSyncAndroid
+		// (null /*path.join(this.$projectData.projectDir, ".cloud") */  , async (device: Mobile.IDevice) => {
+		// 	// const res: any = await this.$injector.resolve("cloudBuildService").build(data1, "Android", "Debug");
+		// 	// let buildInfoFilePath = path.dirname(res.outputFilePath);
+		// 	// let buildInfoFile = path.join(buildInfoFilePath, ".nsbuildinfo");
+		// 	// let prepareInfo = this.$projectChangesService.getPrepareInfo("android", this.$projectData);
+		// 	// let buildInfo: IBuildInfo = {
+		// 	// 	prepareTime: prepareInfo.changesRequireBuildTime,
+		// 	// 	buildTime: new Date().toString()
+		// 	// };
 
-			let buildConfig: IBuildConfig = {
-						buildForDevice: !device.isEmulator,
+		// 	let buildConfig: IBuildConfig = {
+		// 				buildForDevice: !device.isEmulator,
+		// 				projectDir: this.$options.path,
+		// 				release: this.$options.release,
+		// 				device: this.$options.device,
+		// 				provision: this.$options.provision,
+		// 				teamId: this.$options.teamId,
+		// 				keyStoreAlias: this.$options.keyStoreAlias,
+		// 				keyStoreAliasPassword: this.$options.keyStoreAliasPassword,
+		// 				keyStorePassword: this.$options.keyStorePassword,
+		// 				keyStorePath: this.$options.keyStorePath,
+		// 				clean: this.$options.clean
+		// 			};
+
+		// 	// this.$fs.writeJson(buildInfoFile, buildInfo);
+		// 	await this.$platformService.buildPlatform("ios", buildConfig, this.$projectData);
+		// 	return this.$platformService.lastOutputPath("ios", buildConfig, this.$projectData);
+		// 	// return res.outputFilePath;
+		// }, this.$projectData.projectDir);
+		// await this.$usbLiveSyncService.liveSync(platform, this.$projectData, null, this.$options);
+
+		const devicesService = this.$injector.resolve<Mobile.IDevicesService>("devicesService");
+		await devicesService.initialize({ platform: "android", skipDeviceDetectionInterval: true });
+		const liveSyncService = this.$injector.resolve<newLs.RunService>(newLs.RunService);
+		const deviceDescriptors: { identifier: string, buildAction: () => Promise<string>, outputPath?: string }[] = [
+			{
+				identifier: devicesService.getDeviceInstances()[0].deviceInfo.identifier,
+				buildAction: async () => {
+					let buildConfig: IBuildConfig = {
+						buildForDevice: !devicesService.getDeviceInstances()[0].isEmulator,
 						projectDir: this.$options.path,
 						release: this.$options.release,
 						device: this.$options.device,
@@ -69,12 +98,23 @@ export class LiveSyncCommand implements ICommand {
 						clean: this.$options.clean
 					};
 
-			// this.$fs.writeJson(buildInfoFile, buildInfo);
-			await this.$platformService.buildPlatform("ios", buildConfig, this.$projectData);
-			return this.$platformService.lastOutputPath("ios", buildConfig, this.$projectData);
-			// return res.outputFilePath;
-		}, this.$projectData.projectDir);
-		// await this.$usbLiveSyncService.liveSync(platform, this.$projectData, null, this.$options);
+					await this.$platformService.buildPlatform("android", buildConfig, this.$projectData);
+					return this.$platformService.lastOutputPath("android", buildConfig, this.$projectData);
+				}
+			}
+		];
+		// deviceDescriptors: { identifier: string, buildAction: () => Promise<string>, outputPath?: string }[],
+		// liveSyncData: { projectDir: string, shouldStartWatcher: boolean, syncAllFiles: boolean }
+		await liveSyncService.liveSync(
+			deviceDescriptors,
+			{
+				projectDir: this.$injector.resolve<IProjectHelper>("projectHelper").projectDir,
+				shouldStartWatcher: true,
+				syncAllFiles: false
+			}
+		);
+
+		console.log("AFTER WATCH STARTED");
 	}
 
 	public allowedParameters: ICommandParameter[];
