@@ -121,13 +121,14 @@ export class SocketProxyFactory extends EventEmitter implements ISocketProxyFact
 				deviceSocket.write(payload);
 			});
 
-			deviceSocket.on("end", () => {
+			deviceSocket.on("close", () => {
 				this.$logger.info("Backend socket closed!");
-				process.exit(0);
+				webSocket.close();
 			});
 
 			webSocket.on("close", () => {
 				this.$logger.info('Frontend socket closed!');
+				deviceSocket.destroy();
 				if (!this.$options.watch) {
 					process.exit(0);
 				}
